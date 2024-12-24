@@ -14,6 +14,7 @@ import com.app.ecom.ecommerce_app.repository.UserRepository;
 public class UserServices implements UserDetailsService {
 
     private final UserRepository userRepository;
+    
 
     public UserServices(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -22,7 +23,7 @@ public class UserServices implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // Fetch user from the database
-        var user = userRepository.findByUsername(username)
+        com.app.ecom.ecommerce_app.model.User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
         String role = user.getRole().toString();  // Assuming user.getRole() returns a Role enum or custom class
