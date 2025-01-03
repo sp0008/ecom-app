@@ -1,5 +1,6 @@
 package com.app.ecom.ecommerce_app.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
-
+@Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	
@@ -32,22 +33,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	  
 		@Autowired
 	  private UserDetailsService userDetailsService;
-	    
-	 private static final Logger logger=LoggerFactory.getLogger(JwtAuthenticationFilter.class);
-	
-	
+
 	@Override
 	 protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 	throws IOException, ServletException{
 		
 		
-		logger.error("Authentication called for URI: {}", request);
+		log.trace("Authentication called for URI: {}", request);
 		System.out.println(request.getRequestURI());
 		
 		try {	
 			//setting the signin api to be publicly accessible
-			if ("/api/users/signin".equals(request.getRequestURI())) {
-	            filterChain.doFilter(request, response);
+			if ("/api/users/signin".equals(request.getRequestURI()) || ("/api/users/register".equals(request.getRequestURI()))) {
+ 	            filterChain.doFilter(request, response);
 	            return;
 	        }
 			
@@ -60,14 +58,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				UserDetails userDetails=userDetailsService.loadUserByUsername(username);
 				
 				UsernamePasswordAuthenticationToken authentication=new UsernamePasswordAuthenticationToken( userDetails, null, userDetails.getAuthorities());
-				logger.debug("Roles from JWT: {}", userDetails.getAuthorities());
+				log.debug("Roles from JWT: {}", userDetails.getAuthorities());
 				
 				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 				
 				SecurityContextHolder.getContext().setAuthentication(authentication);
 			}	
 			}catch (Exception e) {
-				logger.error("Cannot set user");
+				log.error("Cannot set user");
 			}
 			
 			filterChain.doFilter(request, response);
@@ -77,7 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	
 	private String parseJwt(HttpServletRequest request) {
 		String jwt=jwtUtils.getjwtFromHeader(request);
-		logger.debug("AuthTokenFilter.java:{}", jwt);
+		log.debug("AuthTokenFilter.java:{}", jwt);
 		return jwt;
 	}
 	

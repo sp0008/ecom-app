@@ -10,15 +10,20 @@ import java.util.Date;
 
 import javax.crypto.SecretKey;
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class JwtUtil {
 	private static final Logger logger=LoggerFactory.getLogger(JwtUtil.class);
+
+	private static final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+
 
 	@Value("${spring.app.jwtSecret}")
    private String jwtSecret;
@@ -38,11 +43,26 @@ public class JwtUtil {
 	
 	public String generateTokenFromUsername(UserDetails userDetails) {
 		String username=userDetails.getUsername();
-		return Jwts.builder().subject(username)
-				.issuedAt(new Date())
-				.expiration(new Date(new Date().getTime()+jwtExpirationMs))
-				.signWith(key())
-				.compact();
+//		return Jwts.builder().subject(username)
+//				.issuedAt(new Date())
+//				.expiration(new Date(new Date().getTime()+jwtExpirationMs))
+//				.signWith(key())
+//				.compact();
+
+		 //String username = userDetails.getUsername();
+		Date currentDate = new Date();
+		Date expireDate = new Date(currentDate.getTime() + jwtExpirationMs);
+//			Key key = key();
+			String token = Jwts.builder()
+					.subject(username)
+					.issuedAt(new Date())
+					.expiration(expireDate)
+					.signWith(key)
+					.compact();
+			log.info("New token" + token);
+			return token;
+
+
 	}
 	
 	
@@ -53,7 +73,13 @@ public class JwtUtil {
 	}
 	
 	public Key key() {
-		return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+		try {
+			return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 	
 	public boolean validateJwtToken(String authToken) {

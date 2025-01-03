@@ -1,0 +1,44 @@
+Add Security to project -> Spring Security
+Add Logging -> logging framework -> logback, log4j , SLF4j
+Spring Security Test
+Spring Test
+Unit and integration test
+Mockito, Junit
+
+
+
+-----------------
+Some queries or repository methods might return NoSuchElementException
+- Handle that by using Optional for return value
+Sometimes custom SQL or JPQL queries are not needed
+- JPA provides methods for many generic queries
+Add pagination for large data sets
+
+
+-- 12th Dec-------------------
+
+Interceptor -->
+Filter Class ->CORSFilter
+allowing users to perform certain actions
+
+check the header for auth part
+
+what will be the behaviour if the token gets expired?
+authenticate only login endpoint
+RBAC - role based access
+
+//relation /mapping between two entities
+separate table
+
+unique ID of table
+-- reviews are store aganist product id
+
+//store the order, wishlist in Ids for user
+
+
+----------------
+
+after placing order, display page --> review page
+when user check reviews --> query the review table(orderId, userId, reviewId, review), 
+and display the reviews in text
+

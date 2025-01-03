@@ -40,8 +40,8 @@ public class SecurityConfig{
 	 private JwtAuthenticationEntryPoint unauthorizedHandler;
 	
 	  @Autowired
-	private UserServices userServices;
-	  
+	private UserServices userServices; // Make sure this is injected correctly
+	
 	@Bean
 	public JwtAuthenticationFilter authenticationJwtTokenFilter() {
 		return new JwtAuthenticationFilter();
@@ -52,6 +52,7 @@ public class SecurityConfig{
 		http.authorizeHttpRequests(authorizeRequests -> 
 		    authorizeRequests.requestMatchers("/h2-console/**").permitAll()
 		    .requestMatchers("/api/users/**").permitAll()
+			.requestMatchers("/error").permitAll()
 		    .anyRequest().authenticated());
 	  
 		http.sessionManagement(
@@ -71,6 +72,12 @@ public class SecurityConfig{
 		return http.build();
 	}
 	
+	
+//	@Bean
+//	public UserDetailsService userDetailsService() {
+//		
+//	}
+	
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
@@ -80,5 +87,38 @@ public class SecurityConfig{
 	public AuthenticationManager authenticationManager(AuthenticationConfiguration builder) throws Exception{
 		return builder.getAuthenticationManager();
 	}
-	    
+	
+	
+//	@Bean
+//	public UserDetailsService userdetailsService(UserServices userServices) {
+//		return userServices;
+//	}
+
+    // Define the security filter chain for Spring Security 6
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        http.csrf().disable()
+//            .authorizeRequests()  // Use 'authorizeHttpRequests' for Spring Security 6
+//            .requestMatchers(HttpMethod.GET, "/api/users/check-mail", "/api/users/check-username").permitAll()
+//            .requestMatchers("/api/users/register").permitAll()
+//            .requestMatchers(HttpMethod.GET, "/api/users/**/cart", "/api/users/**/wishlist", "/api/users/**/order-history")
+//                .hasAnyRole("CUSTOMER", "ADMIN")
+//            .requestMatchers(HttpMethod.POST, "/api/users/**/addresses", "/api/users/**/wishlist", "/api/users/**/order-history")
+//                .hasRole("CUSTOMER")
+//            .requestMatchers(HttpMethod.PATCH, "/api/users/**/deactivate", "/api/users/**/change-pwd", "/api/users/**/update-profile-image")
+//                .hasRole("CUSTOMER")
+//            .requestMatchers(HttpMethod.PUT, "/api/users/**/change-role").hasRole("ADMIN")
+//            .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
+//            .anyRequest().authenticated()
+//            .and()
+//            .exceptionHandling().authenticationEntryPoint(unauthorizedHandler)
+//            .and()
+//            .addFilterBefore(new JwtAuthenticationFilter(userService), UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
+//   
+
+
+    
 }

@@ -1,0 +1,25 @@
+<!--<?xml version="1.0" encoding="UTF-8"?>-->
+<!--<Configuration status="WARN">-->
+
+<!--    <Properties>-->
+<!--        <Property name="LOG_PATTERN">-->
+<!--            [%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1}:%L - %msg for uuid = %X{uuid} %n-->
+<!--        </Property>-->
+<!--        <Property name="log-path">/var/log/market-promosupercash-api</Property>-->
+<!--    </Properties>-->
+
+<!--    <Loggers>-->
+<!--        <Logger name="com.app" additivity="false">-->
+<!--            <appender-ref ref="info-log"/>-->
+<!--            <appender-ref ref="error-log" level="WARN"/>-->
+<!--&lt;!&ndash;            <AppenderRef ref="console-log"/>&ndash;&gt;-->
+<!--        </Logger>-->
+<!--        <Logger name="com.paytm.rs.transport.http.impl.HttpTransportServiceImpl" level="OFF" additivity="false">-->
+<!--        </Logger>-->
+<!--        <Root>-->
+<!--            <AppenderRef ref="info-log"/>-->
+<!--            <AppenderRef ref="error-log" level="WARN"/>-->
+<!--&lt;!&ndash;            <AppenderRef ref="console-log"/>&ndash;&gt;-->
+<!--        </Root>-->
+<!--    </Loggers>-->
+<!--</Configuration>-->

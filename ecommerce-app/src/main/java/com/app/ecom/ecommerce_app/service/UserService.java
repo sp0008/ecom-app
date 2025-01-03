@@ -1,5 +1,6 @@
 package com.app.ecom.ecommerce_app.service;
 
+import java.lang.System.Logger;
 import java.time.LocalDate;
 
 import java.time.LocalDateTime;
@@ -7,9 +8,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.hibernate.validator.internal.util.logging.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +25,7 @@ import com.app.ecom.ecommerce_app.exception.DatabaseConstraintViolationException
 import com.app.ecom.ecommerce_app.exception.InvalidArgumentException;
 import com.app.ecom.ecommerce_app.exception.ProductNotFoundException;
 import com.app.ecom.ecommerce_app.exception.RewardNotFoundException;
+import com.app.ecom.ecommerce_app.exception.UnauthorizedAccessException;
 import com.app.ecom.ecommerce_app.exception.UserAlreadyExistsException;
 import com.app.ecom.ecommerce_app.exception.UserNotFoundException;
 //import com.app.ecom.ecommerce_app.exception.UserNotFoundException;
@@ -42,6 +50,9 @@ public class UserService {
 	private final AddressRepository addressRepo;
 	private final ProductRepository productRepo;
 	
+	//private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+
+	
 	public UserService(UserRepository userRepo, PasswordEncoder pwdEncoder, AddressRepository addressRepo, ProductRepository productRepo) {
 		this.userRepo=userRepo;
 		this.pwdEncoder=pwdEncoder;
@@ -49,6 +60,7 @@ public class UserService {
 		this.productRepo=productRepo;
 	}
 	
+
 	//register new user
 	public User registerUser(User user) {
 
@@ -228,6 +240,7 @@ public class UserService {
 
 
 	//delete user by using user Id
+	@PreAuthorize("hasRole('ADMIN')")
 	public void deleteUser(Long userId) {
 	    try {
 	        
@@ -280,32 +293,36 @@ public class UserService {
 
 
 	//change password of the user
-	public void changePwd(Long userId, String oldPwd, String newPwd) {
-	    try {
-	        User user = userRepo.findById(userId)
-	                .orElseThrow(() -> new UserNotFoundException("User not found with ID " + userId));
+	//@RateLimit(maxRequests = 5, duration = 60)
+	@PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
+	public void changePwd(Long userId, String oldPwd, String newPwd, Authentication authentication) {
+	    String authenticatedUserName = authentication.getName();
+	    
+	    User user = userRepo.findById(userId)
+	            .orElseThrow(() -> new UserNotFoundException("User not found with ID " + userId));
 
+	    if (!authenticatedUserName.equals(user.getUsername())) {
+	        throw new UnauthorizedAccessException("You are not authorized to perform this action");
+	    }
+
+	    try {
 	        if (!pwdEncoder.matches(oldPwd, user.getPassword())) {
 	            throw new InvalidArgumentException("Old password is not correct");
 	        }
 
 	        user.setPassword(pwdEncoder.encode(newPwd));
 	        userRepo.save(user);
-	    } catch (UserNotFoundException e) {
-	        throw e;  // Re-throw custom exception for user not found
-	    } catch (InvalidArgumentException e) {
-	        throw e;  // Re-throw custom exception for invalid argument (old password mismatch)
 	    } catch (DataAccessException e) {
-	        // Handle database access errors (e.g., issues during save operation)
 	        throw new DatabaseAccessException("Error occurred while updating the user's password.");
 	    } catch (Exception e) {
-	        // Handle unexpected errors
 	        throw new RuntimeException("Unexpected error occurred while changing the user's password", e);
 	    }
 	}
 
+
 	
 	//add address for a user
+	@PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public void addAddress(Long userId, Address address) {
 	    try {
 	        if (userId == null) {
@@ -549,6 +566,7 @@ public class UserService {
 	}
 	
 	//reset password using email
+	//@RateLimit(maxRequests = 5, duration = 60)
 	public void resetPwd(String email, String pwd) {
 	    try {
 	        User user = userRepo.findByEmail(email)

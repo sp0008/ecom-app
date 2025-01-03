@@ -25,13 +25,12 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(DatabaseAccessException.class)
 	public ResponseEntity<String> handleDatabaseAccessException(DatabaseAccessException ex){
-		return new ResponseEntity<>(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		return new ResponseEntity<>("A database error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 	
 	@ExceptionHandler(DatabaseConstraintViolationException.class)
 	public ResponseEntity<String> handleDatabaseConstraintEexception(DatabaseConstraintViolationException ex){
 		return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
 	}
-	
 	
 }

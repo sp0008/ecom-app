@@ -1,27 +1,32 @@
 package com.app.ecom.ecommerce_app.controller;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
+import com.app.ecom.ecommerce_app.dto.LoginRequest;
+import com.app.ecom.ecommerce_app.dto.LoginResponse;
 import com.app.ecom.ecommerce_app.exception.DatabaseAccessException;
 import com.app.ecom.ecommerce_app.exception.DatabaseConstraintViolationException;
 import com.app.ecom.ecommerce_app.exception.IncorrectPasswordException;
 import com.app.ecom.ecommerce_app.exception.InvalidArgumentException;
 import com.app.ecom.ecommerce_app.exception.ProductNotFoundException;
+import com.app.ecom.ecommerce_app.exception.UnauthorizedAccessException;
 import com.app.ecom.ecommerce_app.exception.UserAlreadyExistsException;
 import com.app.ecom.ecommerce_app.exception.UserNotFoundException;
 //import com.app.ecom.ecommerce_app.exception.RewardNotFoundException;
@@ -31,6 +36,7 @@ import com.app.ecom.ecommerce_app.model.Product;
 import com.app.ecom.ecommerce_app.model.Role;
 import com.app.ecom.ecommerce_app.model.User;
 import com.app.ecom.ecommerce_app.service.UserService;
+import com.app.ecom.ecommerce_app.utils.JwtUtil;
 
 @RestController
 @RequestMapping("/api/users")
@@ -38,11 +44,50 @@ public class UserController {
 	
 	private final UserService userService;
 	
-	public UserController(UserService userService) {
+	@Autowired
+	private AuthenticationManager authenticationManager;
+	
+	private final JwtUtil jwtUtil; // Initialize the JwtUtil class
+
+	
+	public UserController(UserService userService,JwtUtil jwtUtil) {
 		this.userService=userService;
+		this.jwtUtil = jwtUtil;
 	}
 	
+	@ResponseBody
+	@PostMapping("/signin")
+	public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest){
+		Authentication authentication;
+		try {
+		authentication=authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+		}catch(AuthenticationException exception) {
+			Map<String,Object> map=new HashMap<>();
+			map.put("message", "Bad credentials");
+			map.put("status", false);
+			return new ResponseEntity<Object>(map, HttpStatus.NOT_FOUND);
+		}
+
+		SecurityContextHolder.getContext().setAuthentication(authentication);
+        UserDetails userDetails=(UserDetails) authentication.getPrincipal();
+         String jwtToken =jwtUtil.generateTokenFromUsername(userDetails);
+        
+        String role = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .findFirst()
+                .orElse(null);
+
+        LoginResponse response=new LoginResponse(jwtToken,userDetails.getUsername(), role);
+        return ResponseEntity.ok(response);        		
+		
+        		
+	}
+	
+
+	
+	
 	//register new user
+	@ResponseBody
 	@PostMapping("/register")
 	public ResponseEntity<String> registerUser(@RequestBody User user){
 		 try {
@@ -156,6 +201,7 @@ public class UserController {
 
 	
 	//add product to user wishlist
+	 @PreAuthorize("hasRole('CUSTOMER')")  
 	@PostMapping("/{userId}/wishlist/{productId}")
 	public ResponseEntity<String> addWishlist(@PathVariable Long userId, @PathVariable Long productId) {
 	    try {
@@ -175,6 +221,7 @@ public class UserController {
 	
 	//fetch products from user wishlist
 	@GetMapping("/{userId}/wishlist")
+	 @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public ResponseEntity<List<Product>> getUserWishlist(@PathVariable Long userId) {
 	    try {
 	        // Fetch the wishlist of the user, throw an exception if user not found
@@ -193,6 +240,7 @@ public class UserController {
 	
 	//add products to user's order history
 	@PostMapping("{userId}/order-history/{productId}")
+	 @PreAuthorize("hasRole('CUSTOMER')")
 	public ResponseEntity<String> addToOrderHistory(@PathVariable Long userId, @PathVariable Long productId) {
 	    try {
 	        // Call the service method to add the product to the user's order history
@@ -212,6 +260,7 @@ public class UserController {
 		
 	//get order history of a user
 	@GetMapping("/{userId}/order-history")
+	 @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public ResponseEntity<List<Product>> getUserOrderHistory(@PathVariable Long userId) {
 	    try {
 	        // Attempt to retrieve the user's order history
@@ -234,6 +283,7 @@ public class UserController {
 	
 	//add products to user cart
 	@PostMapping("/{userId}/cart/{productId}")
+	 @PreAuthorize("hasRole('CUSTOMER')")
 	public ResponseEntity<String> addToCart(@PathVariable Long userId, @PathVariable Long productId) {
 	    try {
 	        userService.addToCart(userId, productId);
@@ -252,6 +302,7 @@ public class UserController {
 	
 	//fetch products from user cart
 	@GetMapping("/{userId}/cart")
+	 @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public ResponseEntity<List<Product>> getUserCart(@PathVariable Long userId) {
 	    try {
 	        List<Product> cart = userService.getUserCart(userId);
@@ -268,6 +319,7 @@ public class UserController {
 
 	//deactivate user account
 	@PatchMapping("/{userId}/deactivate")
+	 @PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<String> deactivateUserAccount(@PathVariable Long userId) {
 	    try {
 	        userService.deactivateUserAccount(userId);
@@ -288,6 +340,7 @@ public class UserController {
 
 	// Change user role
 	@PutMapping("/{userId}/change-role")
+	 @PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<String> changeUserRole(@PathVariable Long userId, @RequestBody Role newRole) {
 	    try {
 	        userService.assignUserRole(userId, newRole);
@@ -301,20 +354,28 @@ public class UserController {
 
 	// Change password using user Id
 	@PatchMapping("/{id}/change-pwd")
+	@PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public ResponseEntity<String> updatePwd(@PathVariable Long id, 
-	                        @RequestParam String oldPwd, 
-	                       @RequestParam String newPwd) {
+	                                        @RequestParam String oldPwd, 
+	                                        @RequestParam String newPwd, 
+	                                        Authentication authentication) {
 	    try {
-	        userService.changePwd(id, oldPwd, newPwd);
+	        // Pass Authentication object to the service method to verify the user
+	        userService.changePwd(id, oldPwd, newPwd, authentication);
 	        return ResponseEntity.ok("Password changed successfully");
 	    } catch (UserNotFoundException e) {
 	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found with ID " + id);
 	    } catch (IncorrectPasswordException e) {
 	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Old password is incorrect");
+	    } catch (UnauthorizedAccessException e) {
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not authorized to perform this action");
 	    } catch (DatabaseAccessException e) {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error accessing the database");
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error occurred");
 	    }
 	}
+
 
 	// Checking if email is available
 	@GetMapping("/check-mail")
@@ -340,6 +401,7 @@ public class UserController {
 
 	// Update profile image URL for user
 	@PatchMapping("/{userId}/update-profile-image")
+	 @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public ResponseEntity<String> updateUserProfileImage(@PathVariable Long userId, @RequestParam String profileImageUrl) {
 	    try {
 	        userService.updateProfileImage(userId, profileImageUrl);
@@ -354,6 +416,7 @@ public class UserController {
 	
 	//fetch user rewards
 	@GetMapping("/{userId}/rewards")
+	 @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
 	public ResponseEntity<Long> fetchUserRewards(@PathVariable Long userId) {
 	    try {
 	        Optional<Long> rewards = userService.getUserReward(userId);

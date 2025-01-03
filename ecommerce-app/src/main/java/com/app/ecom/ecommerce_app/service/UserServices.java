@@ -3,12 +3,12 @@ package com.app.ecom.ecommerce_app.service;
 import java.util.Collections;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import com.app.ecom.ecommerce_app.repository.UserRepository;
+import com.app.ecom.ecommerce_app.model.User;
 
 @Service
 public class UserServices implements UserDetailsService {
@@ -23,7 +23,7 @@ public class UserServices implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // Fetch user from the database
-        com.app.ecom.ecommerce_app.model.User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
         String role = user.getRole().toString();  // Assuming user.getRole() returns a Role enum or custom class
@@ -32,7 +32,7 @@ public class UserServices implements UserDetailsService {
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
         
         // Map the user to UserDetails (Spring Security User)
-        return User.builder()
+        return  org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword()) // password should be already hashed
                 .authorities(Collections.singletonList(authority)) // Set authorities
